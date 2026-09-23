@@ -417,4 +417,955 @@ img{-webkit-user-drag:none; user-select:none;}
 .modal-overlay.active{display:flex;}
 @media (min-width:900px){.modal-overlay.active{align-items:center;}}
 .modal-sheet{
-  width:100%; max-width:520px; border-radi
+  width:100%; max-width:520px; border-radius:28px 28px 0 0; padding:20px; max-height:85vh; overflow-y:auto;
+}
+@media (min-width:900px){.modal-sheet{border-radius:28px;}}
+.modal-handle{width:40px; height:4px; border-radius:4px; background:var(--glass-border); margin:0 auto 16px;}
+.modal-title{font-size:17px; font-weight:800; margin-bottom:14px;}
+.compose-type-row{display:flex; gap:8px; margin-bottom:14px;}
+.compose-textarea{
+  width:100%; min-height:90px; border-radius:16px; border:1px solid var(--glass-border); background:var(--glass);
+  padding:14px; color:var(--text); font-size:14.5px; font-family:inherit; resize:none; outline:none;
+}
+.compose-textarea::placeholder{color:var(--text-faint);}
+.file-drop{
+  margin-top:12px; border:1.5px dashed var(--glass-border); border-radius:16px; padding:22px; text-align:center;
+  cursor:pointer; color:var(--text-faint); font-size:13px;
+}
+.file-preview{width:100%; border-radius:16px; margin-top:12px; max-height:220px; object-fit:cover;}
+.modal-actions{display:flex; gap:10px; margin-top:16px;}
+.modal-actions .pill-btn{flex:1; justify-content:center;}
+
+.hidden-input{display:none;}
+.toast{
+  position:fixed; top:calc(20px + var(--safe-t)); left:50%; transform:translateX(-50%) translateY(-20px);
+  padding:12px 20px; border-radius:999px; font-size:13.5px; font-weight:600; z-index:400;
+  opacity:0; transition:all .3s ease; pointer-events:none;
+}
+.toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
+
+::-webkit-scrollbar{width:0; height:0;}
+
+.empty-state{text-align:center; padding:50px 30px; color:var(--text-faint);}
+.empty-state div:first-child{font-size:40px; margin-bottom:10px;}
+
+@media (prefers-reduced-motion: reduce){
+  *{animation-duration:0.01ms !important; transition-duration:0.01ms !important;}
+}
+</style>
+</head>
+<body>
+
+<div id="app">
+
+  <!-- ============ SIDEBAR/NAV (desktop) placeholder handled by #bottomnav via media query ============ -->
+
+  <div style="display:flex; flex-direction:column; flex:1; min-width:0;">
+    <div class="topbar glass" id="topbar">
+      <div class="brand"><div class="brand-mark">✦</div>Hive</div>
+      <div class="topbar-actions">
+        <button class="icon-btn" onclick="openSearch()" aria-label="Search">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        </button>
+        <button class="icon-btn" onclick="showToast('No new notifications 🎉')" aria-label="Notifications">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <div id="main">
+
+      <!-- ============ HOME ============ -->
+      <div class="screen active" id="homeScreen">
+        <div class="stories-row" id="storiesRow"></div>
+
+        <div class="composer glass" onclick="openComposer('text')">
+          <div class="avatar" style="width:38px;height:38px;font-size:15px;" id="myAvatarSmall">Y</div>
+          <div class="composer-input">Share something with your circle…</div>
+          <div class="topbar-actions">
+            <button class="icon-btn" onclick="event.stopPropagation(); openComposer('image')" aria-label="Add image">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <div id="feedList"></div>
+      </div>
+
+      <!-- ============ REELS ============ -->
+      <div class="screen" id="reelsScreen">
+        <div class="reels-wrap" id="reelsWrap"></div>
+      </div>
+
+      <!-- ============ CHATS ============ -->
+      <div class="screen" id="chatsScreen">
+        <div class="section-title">Chats</div>
+        <div class="search-bar glass">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input placeholder="Search chats" oninput="filterChats(this.value)">
+        </div>
+        <div id="chatList"></div>
+      </div>
+
+      <!-- ============ GROUPS ============ -->
+      <div class="screen" id="groupsScreen">
+        <div class="section-title">Groups</div>
+        <div class="section-sub">School, college & work spaces you're part of</div>
+        <div id="groupList"></div>
+        <div class="section-title">Discover</div>
+        <div id="groupDiscoverList"></div>
+      </div>
+
+      <!-- ============ FRIENDS ============ -->
+      <div class="screen" id="friendsScreen">
+        <div class="section-title">Friends</div>
+        <div class="search-bar glass">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input placeholder="Search people" oninput="filterFriends(this.value)">
+        </div>
+        <div class="tab-row">
+          <div class="tab-chip active" data-ftab="all" onclick="setFriendTab('all')">All friends</div>
+          <div class="tab-chip" data-ftab="requests" onclick="setFriendTab('requests')">Requests <span id="reqCount"></span></div>
+          <div class="tab-chip" data-ftab="suggest" onclick="setFriendTab('suggest')">Suggestions</div>
+        </div>
+        <div id="friendsList"></div>
+      </div>
+
+      <!-- ============ PROFILE ============ -->
+      <div class="screen" id="profileScreen">
+        <div class="profile-hero glass">
+          <div class="profile-avatar" id="profileAvatar">Y</div>
+          <div class="profile-name" id="profileName">You</div>
+          <div class="profile-handle" id="profileHandle">@you · Riverside College</div>
+          <div class="profile-bio" id="profileBio">Living the good life 🌿 · CS major · always down for coffee & bad puns</div>
+          <div class="profile-stats">
+            <div class="stat"><b>312</b><span>Friends</span></div>
+            <div class="stat"><b>48</b><span>Posts</span></div>
+            <div class="stat"><b>6</b><span>Groups</span></div>
+          </div>
+          <button class="pill-btn primary profile-edit-btn" onclick="editProfile()">Edit profile</button>
+        </div>
+
+        <div class="section-title" style="padding-top:4px;">Your photos</div>
+        <div class="photo-grid" id="photoGrid"></div>
+
+        <div class="section-title">Settings</div>
+        <div class="settings-list glass">
+          <div class="settings-row">
+            <div class="icon-btn" style="background:linear-gradient(135deg,var(--accent1),var(--accent2)); color:#fff;">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+            </div>
+            <div class="sr-label">Appearance — Light / Dark</div>
+            <div class="theme-toggle" id="themeToggle" onclick="toggleTheme()"><div class="knob"></div></div>
+          </div>
+          <div class="settings-row" onclick="showToast('Privacy settings coming soon')">
+            <div class="icon-btn" style="background:linear-gradient(135deg,var(--accent3),var(--accent1)); color:#fff;">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 4 5v6c0 5 3.5 8.5 8 11 4.5-2.5 8-6 8-11V5l-8-3z"/></svg>
+            </div>
+            <div class="sr-label">Privacy & safety</div>
+          </div>
+          <div class="settings-row" onclick="showToast('Saved posts opened')">
+            <div class="icon-btn" style="background:linear-gradient(135deg,var(--accent4),var(--accent2)); color:#fff;">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21 12 16l-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+            </div>
+            <div class="sr-label">Saved posts</div>
+          </div>
+          <div class="settings-row" onclick="showToast('You are all caught up')">
+            <div class="icon-btn" style="background:linear-gradient(135deg,var(--accent2),var(--accent1)); color:#fff;">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+            </div>
+            <div class="sr-label">Activity log</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ============ BOTTOM NAV ============ -->
+  <div id="bottomnav">
+    <div class="nav-inner glass-strong">
+      <button class="nav-btn active" data-screen="homeScreen" onclick="switchScreen('homeScreen')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/></svg>
+        <span>Home</span>
+      </button>
+      <button class="nav-btn" data-screen="reelsScreen" onclick="switchScreen('reelsScreen')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="4"/><path d="M10 9l5 3-5 3z"/></svg>
+        <span>Reels</span>
+      </button>
+      <button class="nav-btn" data-screen="chatsScreen" onclick="switchScreen('chatsScreen')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H8l-5 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        <span>Chats</span>
+      </button>
+      <button class="nav-btn" data-screen="groupsScreen" onclick="switchScreen('groupsScreen')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        <span>Groups</span>
+      </button>
+      <button class="nav-btn" data-screen="friendsScreen" onclick="switchScreen('friendsScreen')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        <span>Friends</span>
+      </button>
+      <button class="nav-btn" data-screen="profileScreen" onclick="switchScreen('profileScreen')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>
+        <span>Profile</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ CHAT CONVERSATION OVERLAY ============ -->
+<div id="chatConvo">
+  <div class="convo-header glass" id="convoHeader">
+    <button class="icon-btn" onclick="closeConvo()" aria-label="Back">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+    </button>
+    <div class="chat-avatar-wrap"><div class="avatar" id="convoAvatar" style="width:38px;height:38px;font-size:16px;"></div></div>
+    <div class="convo-title">
+      <div class="convo-name" id="convoName"></div>
+      <div class="convo-status" id="convoStatus">online</div>
+    </div>
+    <button class="icon-btn" onclick="showToast('Voice call demo')" aria-label="Call">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+    </button>
+  </div>
+  <div class="convo-body" id="convoBody"></div>
+  <div class="convo-input-bar glass">
+    <button class="icon-btn" onclick="triggerConvoImage()" aria-label="Send image">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+    </button>
+    <input class="convo-input" id="convoInput" placeholder="Message…" onkeydown="if(event.key==='Enter')sendConvoMessage()">
+    <button class="icon-btn" style="background:linear-gradient(135deg,var(--accent1),var(--accent2)); border:none; color:#fff;" onclick="sendConvoMessage()" aria-label="Send">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+    </button>
+    <input type="file" accept="image/*" class="hidden-input" id="convoImageInput" onchange="handleConvoImage(event)">
+  </div>
+</div>
+
+<!-- ============ STORY VIEWER ============ -->
+<div id="storyViewer">
+  <div class="story-slide" id="storySlide">
+    <div class="story-progress-row" id="storyProgressRow"></div>
+    <div class="story-top">
+      <div class="avatar" id="storyTopAvatar" style="width:32px;height:32px;font-size:14px; border:2px solid rgba(255,255,255,0.7);"></div>
+      <div style="font-weight:700; font-size:14px;" id="storyTopName"></div>
+      <div style="font-size:12px; opacity:0.75; margin-left:-4px;" id="storyTopTime"></div>
+    </div>
+    <button class="icon-btn story-close" style="background:rgba(255,255,255,0.18); border-color:rgba(255,255,255,0.3); color:#fff;" onclick="closeStory()" aria-label="Close">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+    <div class="story-content" id="storyContent"></div>
+    <div class="story-tap-zone" style="left:0;" onclick="prevStory()"></div>
+    <div class="story-tap-zone" style="right:0;" onclick="nextStory()"></div>
+  </div>
+</div>
+
+<!-- ============ NEW POST / COMPOSER MODAL ============ -->
+<div class="modal-overlay" id="composerOverlay" onclick="if(event.target===this) closeComposer()">
+  <div class="modal-sheet glass-strong">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Create post</div>
+    <div class="compose-type-row">
+      <button class="pill-btn primary" id="typeTextBtn" onclick="setComposeType('text')">📝 Text</button>
+      <button class="pill-btn" id="typeImageBtn" onclick="setComposeType('image')">🖼️ Photo</button>
+      <button class="pill-btn" id="typeQuoteBtn" onclick="setComposeType('quote')">❝ Quote</button>
+    </div>
+    <textarea class="compose-textarea" id="composeText" placeholder="What's on your mind?"></textarea>
+    <div class="file-drop" id="fileDrop" onclick="document.getElementById('composeImageInput').click()">📎 Tap to add a photo from your device</div>
+    <img class="file-preview" id="filePreview" style="display:none;">
+    <input type="file" accept="image/*" class="hidden-input" id="composeImageInput" onchange="handleComposeImage(event)">
+    <div class="modal-actions">
+      <button class="pill-btn" onclick="closeComposer()">Cancel</button>
+      <button class="pill-btn primary" onclick="submitPost()">Post</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ EDIT PROFILE MODAL ============ -->
+<div class="modal-overlay" id="editOverlay" onclick="if(event.target===this) closeEdit()">
+  <div class="modal-sheet glass-strong">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Edit profile</div>
+    <textarea class="compose-textarea" id="editBioInput" style="min-height:56px;"></textarea>
+    <div class="modal-actions">
+      <button class="pill-btn" onclick="closeEdit()">Cancel</button>
+      <button class="pill-btn primary" onclick="saveProfile()">Save</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast glass-strong" id="toast"></div>
+
+<script>
+/* ================= DATA ================= */
+const AVA_COLORS = [
+  'linear-gradient(135deg,#7c6bff,#ff6bcb)','linear-gradient(135deg,#38e6c5,#7c6bff)',
+  'linear-gradient(135deg,#ffb84d,#ff6bcb)','linear-gradient(135deg,#38e6c5,#ffb84d)',
+  'linear-gradient(135deg,#ff6bcb,#7c6bff)','linear-gradient(135deg,#7c6bff,#38e6c5)'
+];
+function avaStyle(seed){ return AVA_COLORS[seed % AVA_COLORS.length]; }
+function initials(name){ return name.split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase(); }
+
+const people = [
+  {id:1, name:'Maya Chen', handle:'@mayachen', emoji:'🌸', school:'Riverside College · Design'},
+  {id:2, name:'Leo Fischer', handle:'@leofischer', emoji:'🎸', school:'Northview High · Class of 27'},
+  {id:3, name:'Aisha Rahman', handle:'@aisharahman', emoji:'📚', school:'Riverside College · CS'},
+  {id:4, name:'Diego Ruiz', handle:'@diegoruiz', emoji:'⚽', school:'Work · Pixel Studio'},
+  {id:5, name:'Sofia Marchetti', handle:'@sofiam', emoji:'☕', school:'Riverside College · Biz'},
+  {id:6, name:'Noah Kim', handle:'@noahkim', emoji:'🎮', school:'Northview High · Class of 26'},
+  {id:7, name:'Priya Nair', handle:'@priyanair', emoji:'✈️', school:'Work · Pixel Studio'},
+  {id:8, name:'Ethan Brooks', handle:'@ethanb', emoji:'🏀', school:'Riverside College · Econ'},
+  {id:9, name:'Chloe Dubois', handle:'@chloed', emoji:'🎨', school:'Riverside College · Art'},
+  {id:10,name:'Sam Okafor', handle:'@samokafor', emoji:'🎧', school:'Work · Pixel Studio'}
+];
+function person(id){ return people.find(p=>p.id===id); }
+
+let stories = [
+  {id:1, personId:1, seen:false, slides:[{type:'photo', grad:'linear-gradient(160deg,#7c6bff,#ff6bcb)', text:'Sunday market run 🍊'}]},
+  {id:2, personId:2, seen:false, slides:[{type:'photo', grad:'linear-gradient(160deg,#38e6c5,#7c6bff)', text:'Band practice 🎸'}]},
+  {id:3, personId:3, seen:false, slides:[{type:'quote', text:'"Finish the semester strong."'},{type:'photo', grad:'linear-gradient(160deg,#ffb84d,#ff6bcb)', text:'Library grind 📖'}]},
+  {id:4, personId:4, seen:true, slides:[{type:'photo', grad:'linear-gradient(160deg,#ff6bcb,#7c6bff)', text:'Match day ⚽'}]},
+  {id:5, personId:5, seen:false, slides:[{type:'photo', grad:'linear-gradient(160deg,#38e6c5,#ffb84d)', text:'New coffee spot ☕'}]},
+  {id:6, personId:9, seen:false, slides:[{type:'photo', grad:'linear-gradient(160deg,#7c6bff,#38e6c5)', text:'Studio session 🎨'}]},
+];
+
+let posts = [
+  {id:1, personId:1, type:'image', grad:'linear-gradient(160deg,#7c6bff,#ff6bcb)', text:'Golden hour on campus 🌇 today was too pretty not to share.', time:'2h', likes:41, liked:false, saved:false, comments:[{personId:3,text:'Stunning 😍'},{personId:5,text:'Where is this??'}], commentsOpen:false},
+  {id:2, personId:3, type:'quote', text:'"Small steps every day beat big leaps once a year."', time:'4h', likes:88, liked:true, saved:true, comments:[{personId:1,text:'needed this today'}], commentsOpen:false},
+  {id:3, personId:4, type:'image', grad:'linear-gradient(160deg,#38e6c5,#ffb84d)', text:'Weekend pickup game with the work crew 🏀', time:'6h', likes:23, liked:false, saved:false, comments:[], commentsOpen:false},
+  {id:4, personId:9, type:'text', text:'Finally finished my final project for studio class! Three weeks of late nights paid off 🎨✨ Will post the full piece soon.', time:'9h', likes:57, liked:false, saved:false, comments:[{personId:8,text:"Can't wait to see it!"},{personId:1,text:"You've got this"}], commentsOpen:false},
+  {id:5, personId:7, type:'image', grad:'linear-gradient(160deg,#ff6bcb,#38e6c5)', text:'Office rooftop, best lunch break spot 🌿', time:'1d', likes:34, liked:false, saved:false, comments:[], commentsOpen:false},
+];
+let nextPostId = 6;
+
+let reels = [
+  {id:1, personId:6, grad:'linear-gradient(200deg,#1b1030,#7c6bff 60%,#ff6bcb)', text:'campus tour speedrun 🏃', likes:212, liked:false},
+  {id:2, personId:2, grad:'linear-gradient(200deg,#0d1b3a,#38e6c5 60%,#7c6bff)', text:'new riff i wrote 🎶', likes:340, liked:false},
+  {id:3, personId:5, grad:'linear-gradient(200deg,#2a0f3a,#ffb84d 60%,#ff6bcb)', text:'latte art fails compilation ☕', likes:98, liked:false},
+  {id:4, personId:10,grad:'linear-gradient(200deg,#1b1030,#ff6bcb 60%,#38e6c5)', text:'studio night shift vibes 🎧', likes:156, liked:false},
+  {id:5, personId:8, grad:'linear-gradient(200deg,#0d1b3a,#7c6bff 60%,#ffb84d)', text:'game winner at the buzzer 🏀', likes:401, liked:false},
+];
+
+let chats = [
+  {id:1, personId:1, online:true, unread:2, msgs:[
+    {me:false, text:'hey! are you free this weekend?'},
+    {me:true, text:"yes! what's up"},
+    {me:false, text:'thinking of grabbing coffee near campus ☕'},
+  ]},
+  {id:2, personId:2, online:true, unread:0, msgs:[
+    {me:false, text:'practice moved to 6pm btw'},
+    {me:true, text:'got it, see you there'},
+  ]},
+  {id:3, personId:4, online:false, unread:1, msgs:[
+    {me:false, text:'good game today 🔥'},
+  ]},
+  {id:4, personId:5, online:true, unread:0, msgs:[
+    {me:true, text:'omg that new cafe is so good'},
+    {me:false, text:'right?? we have to go again'},
+  ]},
+  {id:5, personId:9, online:false, unread:0, msgs:[
+    {me:false, text:'sent you the reference images'},
+    {me:true, text:'perfect, thank you!'},
+  ]},
+  {id:6, personId:7, online:true, unread:0, msgs:[
+    {me:false, text:'lunch tomorrow?'},
+  ]},
+];
+let groupChatMsgs = [
+  {me:false, personId:3, text:"don't forget the study session tonight!"},
+  {me:false, personId:8, text:'what time again?'},
+  {me:false, personId:3, text:'7pm, library 3rd floor'},
+];
+
+let groups = [
+  {id:1, name:'Class of 2026', grad:'linear-gradient(120deg,#7c6bff,#ff6bcb)', members:184, joined:true, desc:'School'},
+  {id:2, name:'Study Club', grad:'linear-gradient(120deg,#38e6c5,#7c6bff)', members:42, joined:true, desc:'College'},
+  {id:3, name:'Pixel Studio Team', grad:'linear-gradient(120deg,#ffb84d,#ff6bcb)', members:16, joined:true, desc:'Work'},
+];
+let discoverGroups = [
+  {id:4, name:'Riverside Photography', grad:'linear-gradient(120deg,#ff6bcb,#38e6c5)', members:97, joined:false, desc:'Interest'},
+  {id:5, name:'Weekend Hikers', grad:'linear-gradient(120deg,#7c6bff,#38e6c5)', members:63, joined:false, desc:'Interest'},
+  {id:6, name:'Alumni Network', grad:'linear-gradient(120deg,#ffb84d,#7c6bff)', members:210, joined:false, desc:'School'},
+];
+
+let friendRequests = [
+  {id:8, mutual:5}, {id:9, mutual:2}
+];
+let friendSuggestions = [
+  {id:10, mutual:3}, {id:6, mutual:1}, {id:7, mutual:4}
+];
+let friendsAll = [1,2,3,4,5].map(id=>({id, mutual:null}));
+
+/* ================= STATE ================= */
+let currentScreen = 'homeScreen';
+let composeType = 'text';
+let composeImageData = null;
+let editingPost = null;
+let currentStoryGroup = null, currentStorySlide = 0, storyTimer = null;
+let activeConvoId = null;
+let activeConvoIsGroup = false;
+let friendTab = 'all';
+
+/* ================= INIT ================= */
+function el(html){ const d=document.createElement('div'); d.innerHTML=html.trim(); return d.firstChild; }
+function esc(str){
+  if(str===undefined || str===null) return '';
+  return String(str).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function renderStories(){
+  const row = document.getElementById('storiesRow');
+  let html = `<div class="story add" onclick="openComposer('image')">
+      <div class="story-ring"><div class="plus-badge">+</div></div>
+      <div class="story-name">Your story</div>
+    </div>`;
+  stories.forEach(s=>{
+    const p = person(s.personId);
+    html += `<div class="story" onclick="openStory(${s.id})">
+      <div class="story-ring ${s.seen?'seen':''}">
+        <div class="story-avatar" style="background:${avaStyle(p.id)};">${p.emoji}</div>
+      </div>
+      <div class="story-name">${p.name.split(' ')[0]}</div>
+    </div>`;
+  });
+  row.innerHTML = html;
+}
+
+function renderFeed(){
+  const list = document.getElementById('feedList');
+  list.innerHTML = posts.map(postHTML).join('');
+}
+
+function postHTML(post){
+  const p = person(post.personId);
+  let media = '';
+  if(post.type==='image'){
+    const bg = post.imgData ? `background-image:url(${post.imgData}); background-size:cover; background-position:center;` : `background:${post.grad};`;
+    media = `<div class="post-media-wrap">
+      <div class="post-media" style="${bg} height:280px; display:flex; align-items:flex-end; padding:14px; color:#fff; font-weight:600; font-size:13px;" ondblclick="likePost(${post.id}, this)">
+        <div class="heart-pop" id="heart-${post.id}">💗</div>
+      </div>
+    </div>`;
+  } else if(post.type==='quote'){
+    media = `<div class="post-quote">${esc(post.text)}</div>`;
+  }
+  const textBlock = (post.type!=='quote' && post.text) ? `<div class="post-text">${esc(post.text)}</div>` : '';
+  const commentsHTML = post.commentsOpen ? `
+    <div class="comments-box">
+      ${post.comments.map(c=>{const cp=person(c.personId); return `<div class="comment"><b>${esc(cp.name.split(' ')[0])}</b> ${esc(c.text)}</div>`;}).join('')}
+      <div class="comment-input-row">
+        <input class="comment-input" placeholder="Write a comment…" onkeydown="if(event.key==='Enter'){addComment(${post.id}, this.value); this.value='';}">
+      </div>
+    </div>` : '';
+  return `<div class="post glass">
+    <div class="post-head">
+      <div class="avatar" style="width:40px;height:40px;font-size:17px; background:${avaStyle(p.id)};">${p.emoji}</div>
+      <div class="post-user">
+        <div class="post-name">${p.name}</div>
+        <div class="post-meta">${post.time} · ${p.school}</div>
+      </div>
+      <button class="icon-btn" style="width:32px;height:32px;" onclick="showToast('More options')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="5" r="1.2"/><circle cx="12" cy="12" r="1.2"/><circle cx="12" cy="19" r="1.2"/></svg>
+      </button>
+    </div>
+    ${textBlock}
+    ${media}
+    <div class="post-actions">
+      <button class="action-btn ${post.liked?'liked':''}" onclick="likePost(${post.id})">
+        <svg viewBox="0 0 24 24" fill="${post.liked?'currentColor':'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z"/></svg>
+        <span id="likecount-${post.id}">${post.likes}</span>
+      </button>
+      <button class="action-btn" onclick="toggleComments(${post.id})">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H8l-5 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        <span>${post.comments.length}</span>
+      </button>
+      <button class="action-btn" onclick="showToast('Shared to your story')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+        <span>Share</span>
+      </button>
+      <span class="action-spacer"></span>
+      <button class="action-btn ${post.saved?'saved':''}" onclick="savePost(${post.id})">
+        <svg viewBox="0 0 24 24" fill="${post.saved?'currentColor':'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21 12 16l-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+      </button>
+    </div>
+    ${commentsHTML}
+  </div>`;
+}
+
+function likePost(id, mediaEl){
+  const post = posts.find(p=>p.id===id);
+  post.liked = !post.liked;
+  post.likes += post.liked ? 1 : -1;
+  document.getElementById(`likecount-${id}`).textContent = post.likes;
+  document.querySelectorAll(`.action-btn`).forEach(()=>{});
+  renderFeed();
+  if(mediaEl){
+    const heart = document.getElementById(`heart-${id}`);
+    if(heart){ heart.classList.remove('pop'); void heart.offsetWidth; heart.classList.add('pop'); }
+  }
+}
+function savePost(id){
+  const post = posts.find(p=>p.id===id);
+  post.saved = !post.saved;
+  renderFeed();
+  showToast(post.saved ? 'Saved to your collection' : 'Removed from saved');
+}
+function toggleComments(id){
+  const post = posts.find(p=>p.id===id);
+  post.commentsOpen = !post.commentsOpen;
+  renderFeed();
+}
+function addComment(id, text){
+  if(!text.trim()) return;
+  const post = posts.find(p=>p.id===id);
+  post.comments.push({personId:0, text: text, me:true});
+  post.commentsOpen = true;
+  renderFeed();
+}
+// patch person(0) as "You"
+const originalPerson = person;
+
+/* ================= REELS ================= */
+function renderReels(){
+  const wrap = document.getElementById('reelsWrap');
+  wrap.innerHTML = reels.map(r=>{
+    const p = person(r.personId);
+    return `<div class="reel" style="background:${r.grad};">
+      <div class="reel-side">
+        <button class="icon-btn" onclick="likeReel(${r.id}, this)">
+          <svg viewBox="0 0 24 24" fill="${r.liked?'#fff':'none'}" stroke="currentColor" stroke-width="2"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z"/></svg>
+        </button>
+        <span id="reellike-${r.id}">${r.likes}</span>
+        <button class="icon-btn" onclick="showToast('Comments coming soon')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H8l-5 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        </button>
+        <span>Reply</span>
+        <button class="icon-btn" onclick="showToast('Shared')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+        </button>
+        <span>Share</span>
+      </div>
+      <div class="reel-caption">
+        <div class="reel-user">@${p.handle.replace('@','')}</div>
+        <div class="reel-text">${r.text}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+function likeReel(id, btn){
+  const r = reels.find(x=>x.id===id);
+  r.liked = !r.liked;
+  r.likes += r.liked ? 1 : -1;
+  document.getElementById(`reellike-${id}`).textContent = r.likes;
+  renderReels();
+}
+
+/* ================= CHATS ================= */
+function lastMsg(chat){ return chat.msgs[chat.msgs.length-1]; }
+function renderChats(filter=''){
+  const list = document.getElementById('chatList');
+  const f = filter.toLowerCase();
+  let html = '';
+  // group chat pinned
+  const groupPreview = groupChatMsgs[groupChatMsgs.length-1];
+  if('study club'.includes(f) || f===''){
+    html += `<div class="chat-list-item glass" onclick="openGroupChat()">
+      <div class="chat-avatar-wrap"><div class="avatar" style="width:48px;height:48px;font-size:20px; background:linear-gradient(120deg,#38e6c5,#7c6bff);">👥</div></div>
+      <div class="chat-info">
+        <div class="chat-top-row"><div class="chat-name">Study Club</div><div class="chat-time">now</div></div>
+        <div class="chat-preview">${person(groupPreview.personId).name.split(' ')[0]}: ${groupPreview.text}</div>
+      </div>
+    </div>`;
+  }
+  chats.filter(c=>person(c.personId).name.toLowerCase().includes(f)).forEach(c=>{
+    const p = person(c.personId);
+    const lm = lastMsg(c);
+    html += `<div class="chat-list-item glass" onclick="openConvo(${c.id})">
+      <div class="chat-avatar-wrap">
+        <div class="avatar" style="width:48px;height:48px;font-size:20px; background:${avaStyle(p.id)};">${p.emoji}</div>
+        ${c.online?'<div class="online-dot"></div>':''}
+      </div>
+      <div class="chat-info">
+        <div class="chat-top-row"><div class="chat-name">${p.name}</div><div class="chat-time">now</div></div>
+        <div class="chat-preview">${lm.me?'You: ':''}${lm.text}</div>
+      </div>
+      ${c.unread>0?`<div class="unread-badge">${c.unread}</div>`:''}
+    </div>`;
+  });
+  list.innerHTML = html;
+}
+function filterChats(v){ renderChats(v); }
+
+function openConvo(id){
+  activeConvoId = id; activeConvoIsGroup = false;
+  const chat = chats.find(c=>c.id===id);
+  chat.unread = 0;
+  const p = person(chat.personId);
+  document.getElementById('convoAvatar').style.background = avaStyle(p.id);
+  document.getElementById('convoAvatar').textContent = p.emoji;
+  document.getElementById('convoName').textContent = p.name;
+  document.getElementById('convoStatus').textContent = chat.online ? 'online' : 'last seen recently';
+  renderConvoBody(chat.msgs);
+  document.getElementById('chatConvo').classList.add('active');
+  renderChats();
+}
+function openGroupChat(){
+  activeConvoId = 'group'; activeConvoIsGroup = true;
+  document.getElementById('convoAvatar').style.background = 'linear-gradient(120deg,#38e6c5,#7c6bff)';
+  document.getElementById('convoAvatar').textContent = '👥';
+  document.getElementById('convoName').textContent = 'Study Club';
+  document.getElementById('convoStatus').textContent = '12 members online';
+  renderConvoBody(groupChatMsgs, true);
+  document.getElementById('chatConvo').classList.add('active');
+}
+function renderConvoBody(msgs, isGroup){
+  const body = document.getElementById('convoBody');
+  body.innerHTML = msgs.map(m=>{
+    let inner = m.text ? esc(m.text) : '';
+    if(m.img && typeof m.img==='string' && m.img.startsWith('data:image/')) inner += `<img src="${m.img}">`;
+    const label = (isGroup && !m.me) ? `<div style="font-size:11px; font-weight:700; opacity:0.7; margin-bottom:3px;">${esc(person(m.personId).name.split(' ')[0])}</div>` : '';
+    return `<div class="msg-row ${m.me?'me':''}"><div class="bubble">${label}${inner}</div></div>`;
+  }).join('');
+  body.scrollTop = body.scrollHeight;
+}
+function closeConvo(){ document.getElementById('chatConvo').classList.remove('active'); activeConvoId=null; }
+
+function sendConvoMessage(){
+  const input = document.getElementById('convoInput');
+  const text = input.value.trim();
+  if(!text) return;
+  input.value = '';
+  if(activeConvoIsGroup){
+    groupChatMsgs.push({me:true, text});
+    renderConvoBody(groupChatMsgs, true);
+  } else {
+    const chat = chats.find(c=>c.id===activeConvoId);
+    chat.msgs.push({me:true, text});
+    renderConvoBody(chat.msgs);
+    simulateReply(chat);
+  }
+  renderChats();
+}
+function simulateReply(chat){
+  const body = document.getElementById('convoBody');
+  const typingEl = el(`<div class="typing-dots" id="typingIndicator"><span></span><span></span><span></span></div>`);
+  body.appendChild(typingEl);
+  body.scrollTop = body.scrollHeight;
+  const replies = ['haha nice 😄','for sure!','sounds good to me','omg really?',"I'll let you know","can't wait 🙌",'totally agree','lol true'];
+  setTimeout(()=>{
+    if(document.getElementById('typingIndicator')) document.getElementById('typingIndicator').remove();
+    const reply = replies[Math.floor(Math.random()*replies.length)];
+    chat.msgs.push({me:false, text:reply});
+    if(activeConvoId===chat.id) renderConvoBody(chat.msgs);
+    renderChats();
+  }, 1300);
+}
+function triggerConvoImage(){ document.getElementById('convoImageInput').click(); }
+function handleConvoImage(e){
+  const file = e.target.files[0];
+  if(!file) return;
+  if(!file.type.startsWith('image/')){ showToast('Please choose an image file'); e.target.value=''; return; }
+  if(file.size > 8*1024*1024){ showToast('Image is too large (max 8MB)'); e.target.value=''; return; }
+  const reader = new FileReader();
+  reader.onerror = ()=>{ showToast('Could not read that image'); };
+  reader.onload = ev=>{
+    try{
+      if(activeConvoIsGroup){
+        groupChatMsgs.push({me:true, img:ev.target.result});
+        renderConvoBody(groupChatMsgs, true);
+      } else {
+        const chat = chats.find(c=>c.id===activeConvoId);
+        chat.msgs.push({me:true, img:ev.target.result});
+        renderConvoBody(chat.msgs);
+        simulateReply(chat);
+      }
+      renderChats();
+    } catch(err){ showToast('Something went wrong sending that image'); }
+  };
+  reader.readAsDataURL(file);
+  e.target.value = '';
+}
+
+/* ================= GROUPS ================= */
+function renderGroups(){
+  document.getElementById('groupList').innerHTML = groups.map(groupCard).join('');
+  document.getElementById('groupDiscoverList').innerHTML = discoverGroups.map(groupCard).join('');
+}
+function groupCard(g){
+  return `<div class="group-card glass">
+    <div class="group-banner" style="background:${g.grad};"></div>
+    <div class="group-body">
+      <div class="g-info">
+        <div class="group-name">${g.name}</div>
+        <div class="group-meta">${g.members} members · ${g.desc}</div>
+      </div>
+      <button class="pill-btn ${g.joined?'':'primary'}" onclick="toggleGroup(${g.id}, this)">${g.joined?'Joined':'Join'}</button>
+    </div>
+  </div>`;
+}
+function toggleGroup(id, btn){
+  let g = groups.find(x=>x.id===id) || discoverGroups.find(x=>x.id===id);
+  g.joined = !g.joined;
+  showToast(g.joined ? `Joined ${g.name}` : `Left ${g.name}`);
+  renderGroups();
+}
+
+/* ================= FRIENDS ================= */
+function setFriendTab(tab){
+  friendTab = tab;
+  document.querySelectorAll('.tab-chip').forEach(c=>c.classList.toggle('active', c.dataset.ftab===tab));
+  renderFriends();
+}
+function renderFriends(filter=''){
+  const list = document.getElementById('friendsList');
+  const f = filter.toLowerCase();
+  document.getElementById('reqCount').textContent = friendRequests.length ? `(${friendRequests.length})` : '';
+  if(friendTab==='requests'){
+    if(friendRequests.length===0){ list.innerHTML = emptyState('👋','No pending requests'); return; }
+    list.innerHTML = friendRequests.map(r=>{
+      const p = person(r.id);
+      if(!p.name.toLowerCase().includes(f)) return '';
+      return `<div class="friend-row glass">
+        <div class="avatar" style="width:46px;height:46px;font-size:19px; background:${avaStyle(p.id)};">${p.emoji}</div>
+        <div class="friend-info"><div class="friend-name">${p.name}</div><div class="friend-meta">${r.mutual} mutual friends</div></div>
+        <div class="friend-actions">
+          <button class="pill-btn primary" onclick="acceptRequest(${p.id})">Accept</button>
+          <button class="pill-btn" onclick="declineRequest(${p.id})">Decline</button>
+        </div>
+      </div>`;
+    }).join('') || emptyState('🔍','No matches found');
+  } else if(friendTab==='suggest'){
+    list.innerHTML = friendSuggestions.map(r=>{
+      const p = person(r.id);
+      if(!p.name.toLowerCase().includes(f)) return '';
+      return `<div class="friend-row glass">
+        <div class="avatar" style="width:46px;height:46px;font-size:19px; background:${avaStyle(p.id)};">${p.emoji}</div>
+        <div class="friend-info"><div class="friend-name">${p.name}</div><div class="friend-meta">${r.mutual} mutual friends</div></div>
+        <div class="friend-actions"><button class="pill-btn primary" onclick="addFriend(${p.id}, this)">Add</button></div>
+      </div>`;
+    }).join('') || emptyState('🔍','No matches found');
+  } else {
+    list.innerHTML = friendsAll.map(r=>{
+      const p = person(r.id);
+      if(!p.name.toLowerCase().includes(f)) return '';
+      return `<div class="friend-row glass" onclick="showToast(&quot;Opening ${p.name}'s profile&quot;)">
+        <div class="avatar" style="width:46px;height:46px;font-size:19px; background:${avaStyle(p.id)};">${p.emoji}</div>
+        <div class="friend-info"><div class="friend-name">${p.name}</div><div class="friend-meta">${p.school}</div></div>
+        <button class="icon-btn" onclick="event.stopPropagation(); openConvoFromFriend(${p.id})">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H8l-5 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        </button>
+      </div>`;
+    }).join('') || emptyState('🔍','No matches found');
+  }
+}
+function emptyState(icon, msg){ return `<div class="empty-state"><div>${icon}</div><div>${msg}</div></div>`; }
+function acceptRequest(id){
+  friendRequests = friendRequests.filter(r=>r.id!==id);
+  friendsAll.push({id, mutual:null});
+  showToast(`You and ${person(id).name.split(' ')[0]} are now friends`);
+  renderFriends();
+}
+function declineRequest(id){ friendRequests = friendRequests.filter(r=>r.id!==id); renderFriends(); }
+function addFriend(id, btn){
+  friendSuggestions = friendSuggestions.filter(r=>r.id!==id);
+  showToast(`Friend request sent to ${person(id).name.split(' ')[0]}`);
+  renderFriends();
+}
+function filterFriends(v){ renderFriends(v); }
+function openConvoFromFriend(id){
+  let chat = chats.find(c=>c.personId===id);
+  if(!chat){ chat = {id: chats.length+10, personId:id, online:false, unread:0, msgs:[]}; chats.push(chat); }
+  switchScreen('chatsScreen');
+  openConvo(chat.id);
+}
+
+/* ================= PROFILE ================= */
+function renderProfilePhotos(){
+  const grid = document.getElementById('photoGrid');
+  const grads = ['linear-gradient(140deg,#7c6bff,#ff6bcb)','linear-gradient(140deg,#38e6c5,#7c6bff)','linear-gradient(140deg,#ffb84d,#ff6bcb)','linear-gradient(140deg,#ff6bcb,#38e6c5)','linear-gradient(140deg,#7c6bff,#38e6c5)','linear-gradient(140deg,#38e6c5,#ffb84d)'];
+  grid.innerHTML = grads.map(g=>`<div style="background:${g};"></div>`).join('');
+}
+function editProfile(){
+  document.getElementById('editBioInput').value = document.getElementById('profileBio').textContent;
+  document.getElementById('editOverlay').classList.add('active');
+}
+function closeEdit(){ document.getElementById('editOverlay').classList.remove('active'); }
+function saveProfile(){
+  document.getElementById('profileBio').textContent = document.getElementById('editBioInput').value;
+  closeEdit();
+  showToast('Profile updated');
+}
+
+/* ================= THEME ================= */
+function toggleTheme(){
+  const root = document.documentElement;
+  const isLight = root.getAttribute('data-theme')==='light';
+  const next = isLight ? 'dark' : 'light';
+  root.setAttribute('data-theme', next);
+  saveDoc('prefs/theme', {value: next});
+}
+// respect system preference initially, then let saved preference override once db loads
+if(window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches){
+  document.documentElement.setAttribute('data-theme','light');
+}
+
+/* ================= OPTIONAL SHARED PERSISTENCE (db capability) ================= */
+let hiveDB = null;
+async function saveDoc(path, data){
+  try{
+    if(!hiveDB) return;
+    await hiveDB.doc(path).set(data);
+  } catch(err){ /* persistence is best-effort; app works fine without it */ }
+}
+async function initPersistence(){
+  try{
+    if(!window.claude || typeof window.claude.use !== 'function') return;
+    hiveDB = await window.claude.use('db');
+    if(!hiveDB) return;
+    const themeDoc = await hiveDB.doc('prefs/theme').get().catch(()=>null);
+    if(themeDoc && themeDoc.value){ document.documentElement.setAttribute('data-theme', themeDoc.value); }
+  } catch(err){ hiveDB = null; }
+}
+initPersistence();
+
+/* ================= NAV / SCREENS ================= */
+function switchScreen(id){
+  currentScreen = id;
+  document.querySelectorAll('.screen').forEach(s=>s.classList.toggle('active', s.id===id));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.toggle('active', b.dataset.screen===id));
+  document.getElementById('main').scrollTop = 0;
+}
+
+/* ================= STORIES VIEWER ================= */
+function openStory(groupId){
+  currentStoryGroup = stories.find(s=>s.id===groupId);
+  currentStorySlide = 0;
+  currentStoryGroup.seen = true;
+  renderStories();
+  showStorySlide();
+  document.getElementById('storyViewer').classList.add('active');
+}
+function showStorySlide(){
+  const group = currentStoryGroup;
+  const p = person(group.personId);
+  const slide = group.slides[currentStorySlide];
+  document.getElementById('storyTopAvatar').style.background = avaStyle(p.id);
+  document.getElementById('storyTopAvatar').textContent = p.emoji;
+  document.getElementById('storyTopName').textContent = p.name;
+  document.getElementById('storyTopTime').textContent = '· 2h';
+  const content = document.getElementById('storyContent');
+  content.style.background = slide.grad || 'linear-gradient(160deg,#1b1030,#2a0f3a)';
+  content.textContent = slide.text;
+
+  const row = document.getElementById('storyProgressRow');
+  row.innerHTML = group.slides.map((s,i)=>`<div class="story-progress-bar"><div class="story-progress-fill ${i<currentStorySlide?'done':''}" id="storybar-${i}"></div></div>`).join('');
+
+  clearTimeout(storyTimer);
+  const bar = document.getElementById(`storybar-${currentStorySlide}`);
+  requestAnimationFrame(()=>{
+    bar.style.transition = 'width 4.2s linear';
+    bar.style.width = '100%';
+  });
+  storyTimer = setTimeout(nextStory, 4300);
+}
+function nextStory(){
+  if(!currentStoryGroup) return;
+  currentStorySlide++;
+  if(currentStorySlide >= currentStoryGroup.slides.length){
+    closeStory();
+  } else {
+    showStorySlide();
+  }
+}
+function prevStory(){
+  if(!currentStoryGroup) return;
+  currentStorySlide = Math.max(0, currentStorySlide-1);
+  showStorySlide();
+}
+function closeStory(){
+  clearTimeout(storyTimer);
+  document.getElementById('storyViewer').classList.remove('active');
+  currentStoryGroup = null;
+}
+
+/* ================= COMPOSER ================= */
+function openComposer(type){
+  composeType = type || 'text';
+  composeImageData = null;
+  document.getElementById('composeText').value = '';
+  document.getElementById('filePreview').style.display='none';
+  document.getElementById('fileDrop').style.display = composeType==='image' ? 'block' : 'none';
+  updateComposeTypeButtons();
+  document.getElementById('composerOverlay').classList.add('active');
+}
+function setComposeType(type){
+  composeType = type;
+  document.getElementById('fileDrop').style.display = composeType==='image' ? 'block' : 'none';
+  updateComposeTypeButtons();
+}
+function updateComposeTypeButtons(){
+  ['text','image','quote'].forEach(t=>{
+    document.getElementById('type'+t.charAt(0).toUpperCase()+t.slice(1)+'Btn').className = 'pill-btn' + (composeType===t ? ' primary' : '');
+  });
+  document.getElementById('composeText').placeholder = composeType==='quote' ? 'Type a quote to share…' : "What's on your mind?";
+}
+function handleComposeImage(e){
+  const file = e.target.files[0];
+  if(!file) return;
+  if(!file.type.startsWith('image/')){ showToast('Please choose an image file'); e.target.value=''; return; }
+  if(file.size > 8*1024*1024){ showToast('Image is too large (max 8MB)'); e.target.value=''; return; }
+  const reader = new FileReader();
+  reader.onerror = ()=>{ showToast('Could not read that image'); };
+  reader.onload = ev=>{
+    composeImageData = ev.target.result;
+    const preview = document.getElementById('filePreview');
+    preview.src = composeImageData;
+    preview.style.display = 'block';
+  };
+  reader.readAsDataURL(file);
+}
+function closeComposer(){ document.getElementById('composerOverlay').classList.remove('active'); }
+function submitPost(){
+  const text = document.getElementById('composeText').value.trim();
+  if(!text && !composeImageData){ showToast('Add some text or a photo first'); return; }
+  const newPost = {
+    id: nextPostId++, personId: 0, type: composeType,
+    text: composeType==='quote' ? `"${text}"` : text,
+    time:'now', likes:0, liked:false, saved:false, comments:[], commentsOpen:false,
+    grad: 'linear-gradient(160deg,#7c6bff,#38e6c5)'
+  };
+  if(composeType==='image' && composeImageData){ newPost.imgData = composeImageData; }
+  posts.unshift(newPost);
+  renderFeed();
+  closeComposer();
+  showToast('Posted!');
+}
+
+/* patch person(0) to be "You" for posts/comments */
+const _person = person;
+person = function(id){
+  if(id===0) return {id:0, name:'You', handle:'@you', emoji:'🙂', school:'Riverside College'};
+  return _person(id);
+};
+
+/* ================= MISC ================= */
+function openSearch(){ switchScreen('friendsScreen'); showToast('Search people, groups & posts'); }
+let toastTimer;
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>t.classList.remove('show'), 2200);
+}
+
+/* ================= BOOT ================= */
+renderStories();
+renderFeed();
+renderReels();
+renderChats();
+renderGroups();
+renderFriends();
+renderProfilePhotos();
+</script>
+</body>
+</html>
